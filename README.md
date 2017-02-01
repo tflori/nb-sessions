@@ -7,7 +7,6 @@ A non-blocking session handler for PHP. This library is inspired by
 ### basic
 
 ```php
-<?php
 $session = new \NbSessions\SessionInstance('my-app');
 $session->set('login', 'jdoe');
 $login = $session->get('login');
@@ -18,7 +17,6 @@ $login = $session->get('login');
 To avoid key collisions you can use namespaces.
 
 ```php
-<?php
 $session->set('foo', 'bar');
 
 $namespace = $session->getNamespace('my-module');
@@ -33,7 +31,6 @@ $namespace->get('foo'); // 'baz'
 For easier access you can use the static class. But remember: it's more hard to test.
 
 ```php
-<?php
 $namespace = \NbSessions\Session::getNamespace('my-module');
 \NbSessions\Session::get('foo');
 ```
