@@ -42,12 +42,15 @@ class CookieTest extends TestCase
     {
         $url = 'http://localhost:' . self::SERVER_PORT . '/' . ltrim($url, '/');
 
+        $fh = fopen('/tmp/nbcurldebug', 'w');
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HEADER         => true,
             CURLOPT_COOKIEJAR      => '/tmp/nbcookies',
             CURLOPT_COOKIEFILE     => '/tmp/nbcookies',
+            CURLOPT_VERBOSE        => true,
+            CURLOPT_STDERR         => $fh
         ]);
         $response = curl_exec($ch);
 
@@ -208,5 +211,63 @@ class CookieTest extends TestCase
         list($header, $body) = self::requestWebserver('session.php?session_cookie_httponly=true');
 
         self::assertCookieHeader($header, 'nbsession', ['httponly' => true]);
+    }
+
+    public function testSessionCookieGetNotResend()
+    {
+        self::requestWebserver('session.php');
+
+        list($header, $body) = self::requestWebserver('session.php');
+
+        self::assertNotCookieHeader($header, 'nbsession');
+    }
+
+    public function testTimeLimitedCookieGetResend()
+    {
+        $url = 'session.php?session_cookie_lifetime=300';
+        self::requestWebserver($url);
+
+        list($header, $body) = self::requestWebserver($url);
+
+        self::assertCookieHeader($header, 'nbsession', ['expires' => time()+300]);
+    }
+
+    public function provideCookieParams()
+    {
+        return [
+            []
+        ];
+    }
+    public function testTimeLimitedCookieGetResendWithParams()
+    {
+        $url = 'session.php?session_cookie_lifetime=300&session_cookie_path=/&session_cookie_domain=localhost' .
+            '&session_cookie_secure=false&session_cookie_httponly=false';
+        self::requestWebserver($url);
+
+        list($header, $body) = self::requestWebserver($url);
+
+        self::assertCookieHeader($header, 'nbsession', [
+            'expires' => time()+300,
+            'path' => '/',
+            'domain' => 'localhost',
+            'secure' => false,
+            'httponly' => false,
+        ]);
+    }
+
+    public function testCookieGetNotSendTwice()
+    {
+        list($header, $body) = self::requestWebserver('session.php?session_cookie_lifetime=300');
+
+        self::assertCookieHeader($header, 'nbsession', ['expires' => time()+300], 1);
+    }
+
+    public function testDestroyDeletesTheCookie()
+    {
+        self::requestWebserver('session.php');
+
+        list($header, $body) = self::requestWebserver('session.php?destroy=true');
+
+        self::assertCookieHeader($header, 'nbsession', ['expired' => true, 'value' => 'deleted']);
     }
 }

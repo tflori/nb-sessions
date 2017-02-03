@@ -7,12 +7,6 @@ use PHPUnit\Framework\TestCase;
 
 class BasicTest extends TestCase
 {
-    public static function setUpBeforeClass()
-    {
-        parent::setUpBeforeClass();
-        ini_set('session.use_cookies', '0');
-    }
-
     protected function setUp()
     {
         parent::setUp();

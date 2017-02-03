@@ -29,6 +29,10 @@ $session = new \NbSessions\SessionInstance('nbsession');
 
 $session->get('foo');
 
+if ($_GET['destroy'] === 'true') {
+    $session->destroy();
+}
+
 header('Content-Type: application/json');
 echo json_encode(session_id());
 
