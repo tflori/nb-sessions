@@ -2,9 +2,7 @@
 
 namespace NbSessions\Test;
 
-use PHPUnit\Framework\TestCase;
-
-class CookieTest extends TestCase
+class CookieTest extends \PHPUnit\Framework\TestCase
 {
     const SERVER_PORT = 31337;
     private static $pid;

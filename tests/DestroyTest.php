@@ -15,6 +15,8 @@ class DestroyTest extends TestCase
         ]);
 
         $session->destroy();
+        // in hhvm we need to define the session handler again after destroy
+        session_set_save_handler($this->sessionHandler);
 
         self::assertNull($session->get('foo'));
         self::assertNull($session->get('name'));
@@ -45,6 +47,8 @@ class DestroyTest extends TestCase
         $session->set('foo', 'bar');
         $this->sessionHandler->shouldReceive('destroy')->with(session_id())->once()->passthru();
         $session->destroy();
+        // in hhvm we need to define the session handler again after destroy
+        session_set_save_handler($this->sessionHandler);
 
         $session->set('foo', 'bar');
 
