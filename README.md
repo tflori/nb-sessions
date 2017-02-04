@@ -1,4 +1,8 @@
 # NbSessions
+
+[![Build Status](https://travis-ci.org/tflori/nb-sessions.svg?branch=master)](https://travis-ci.org/tflori/nb-sessions)
+[![Coverage Status](https://coveralls.io/repos/github/tflori/nb-sessions/badge.svg)](https://coveralls.io/github/tflori/nb-sessions)
+
 A non-blocking session handler for PHP. This library is inspired by 
 [duncan3dc/sessions](https://github.com/duncan3dc/sessions).
 

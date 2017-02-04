@@ -4,7 +4,7 @@ namespace NbSessions\Test;
 
 use Mockery\Mock;
 
-class TestCase extends \PHPUnit\Framework\TestCase
+abstract class TestCase extends \PHPUnit\Framework\TestCase
 {
     /** @var Mock|\SessionHandler */
     protected $sessionHandler;

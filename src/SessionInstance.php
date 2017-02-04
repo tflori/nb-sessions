@@ -8,7 +8,7 @@ namespace NbSessions;
  * @package NbSessions
  * @author  Thomas Flori <thflori@gmail.com>
  */
-class SessionInstance
+class SessionInstance implements SessionInterface
 {
     /** Whether the session has been started or not.
      * @var bool $init
@@ -34,9 +34,12 @@ class SessionInstance
      */
     protected $cookieParams = [];
 
+    /** The created SessionNamespaces
+     * @var SessionNamespace[]
+     */
+    protected $namespaces = [];
+
     /**
-     * Create a new instance.
-     *
      * @param string $name The name of the session
      * @param array $cookieParams Cookie parameters to be set before init
      */
@@ -48,6 +51,22 @@ class SessionInstance
 
         $this->name = $name;
         $this->cookieParams = array_merge(session_get_cookie_params(), $cookieParams);
+    }
+
+    /**
+     * Create a new namespaced section of this session to avoid clashes.
+     *
+     * @param string $name The namespace of the session
+     *
+     * @return SessionNamespace
+     */
+    public function getNamespace($name)
+    {
+        if (!isset($this->namespaces[$name])) {
+            $this->namespaces[$name] = new SessionNamespace($name, $this);
+        }
+
+        return $this->namespaces[$name];
     }
 
     /**
@@ -104,13 +123,7 @@ class SessionInstance
         session_write_close();
     }
 
-    /**
-     * Get a value from the session data cache.
-     *
-     * @param string $key The name of the name to retrieve
-     *
-     * @return mixed
-     */
+    /** {@inheritdoc} */
     public function get($key)
     {
         $this->init();
@@ -122,14 +135,7 @@ class SessionInstance
         return $this->data[$key];
     }
 
-    /**
-     * Set a value within session data.
-     *
-     * @param string|array $data Either the name of the session key to update, or an array of keys to update
-     * @param mixed $value If $data is a string then store this value in the session data
-     *
-     * @return static
-     */
+    /** {@inheritdoc} */
     public function set($data, $value = null)
     {
         $this->init();
