@@ -2,18 +2,10 @@
 
 require __DIR__ . '/../../vendor/autoload.php';
 
-$sessionSavePath = '/tmp/nbsessions';
-
 // reset session settings
 ini_set('session.use_cookies', 1);
-ini_set('session.save_handler', 'file');
-session_save_path($sessionSavePath);
 session_set_cookie_params(0, null, null, false, false);
-
-// ensure session folder exists
-if (!file_exists($sessionSavePath)) {
-    mkdir($sessionSavePath);
-}
+session_set_save_handler(new \NbSessions\Test\SessionHandler());
 
 if ($_GET['use_cookies'] === 'false') {
     ini_set('session.use_cookies', 0);
@@ -33,10 +25,15 @@ if ($_GET['destroy'] === 'true') {
     $session->destroy();
 }
 
+if ($_GET['reuse'] === 'true') {
+    $session->get('foo');
+}
+
 header('Content-Type: application/json');
 echo json_encode(session_id());
 
-function setCookieParams($params) {
+function setCookieParams($params)
+{
     $params = array_merge(session_get_cookie_params(), $params);
     session_set_cookie_params(
         $params['lifetime'],

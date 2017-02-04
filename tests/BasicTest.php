@@ -3,7 +3,6 @@
 namespace NbSessions\Test;
 
 use NbSessions\SessionInstance;
-use PHPUnit\Framework\TestCase;
 
 class BasicTest extends TestCase
 {
@@ -28,15 +27,6 @@ class BasicTest extends TestCase
         $session = new SessionInstance('session');
 
         self::assertInstanceOf(SessionInstance::class, $session);
-    }
-
-    public function testReturnsNullForUnknownKeys()
-    {
-        $session = new SessionInstance('session');
-
-        $result = $session->get('foobar');
-
-        self::assertNull($result);
     }
 
     public function testDoesNotStartSessionWithoutInteraction()

@@ -11,19 +11,27 @@ namespace NbSessions;
 class SessionInstance
 {
     /** Whether the session has been started or not.
-     * @var bool $init */
+     * @var bool $init
+     */
     protected $init = false;
 
+    /** Wether the session has been destroyed or not.
+     * @var bool */
+    protected $destroyed = false;
+
     /** The name of the session.
-     * @var string $name */
+     * @var string $name
+     */
     protected $name = '';
 
     /** The cache of the session data.
-     * @var array $data */
+     * @var array $data
+     */
     protected $data = [];
 
     /** The cookie params.
-     * @var array */
+     * @var array
+     */
     protected $cookieParams = [];
 
     /**
@@ -67,21 +75,17 @@ class SessionInstance
         session_start();
 
         // refresh time limited cookies on each use
-        if (ini_get('session.use_cookies') && $this->cookieParams['lifetime'] != 0) {
-
-            // @codeCoverageIgnoreStart
-            // headers_list() is always empty in cli - covered in CookieTest
-            $cookieSent = false;
-            foreach (headers_list() as $header) {
-                if (substr($header, 0, 12) === 'Set-Cookie: ' &&
-                    substr($header, 12, strlen($this->name)) === $this->name
-                ) {
-                    $cookieSent = true;
-                }
+        if (ini_get('session.use_cookies')) {
+            $sendCookie = false;
+            if ($this->cookieParams['lifetime'] != 0) {
+                $sendCookie = true;
+            } elseif ($this->destroyed) {
+                $this->destroyed = false;
+                $sendCookie = true;
             }
-            // @codeCoverageIgnoreEnd
 
-            if (!$cookieSent) {
+            if ($sendCookie) {
+                $this->removePreviousSessionCookie();
                 setcookie(
                     $this->name,
                     session_id(),
@@ -111,25 +115,66 @@ class SessionInstance
     {
         $this->init();
 
-//        if (!array_key_exists($key, $this->data)) {
+        if (!array_key_exists($key, $this->data)) {
             return null;
-//        }
+        }
 
-//        return $this->data[$key];
+        return $this->data[$key];
+    }
+
+    /**
+     * Set a value within session data.
+     *
+     * @param string|array $data Either the name of the session key to update, or an array of keys to update
+     * @param mixed $value If $data is a string then store this value in the session data
+     *
+     * @return static
+     */
+    public function set($data, $value = null)
+    {
+        $this->init();
+
+        // convert parameter use to array usage
+        if (!is_array($data)) {
+            $data = [$data => $value];
+        }
+
+        // Check that at least one value has been changed before starting up the session
+        $changed = false;
+        foreach ($data as $key => $val) {
+            if ($this->get($key) !== $val) {
+                $changed = true;
+                break;
+            }
+        }
+
+        if (!$changed) {
+            return $this;
+        }
+
+        // Whenever a key is set, we need to start the session up again to store it.
+        // When session_start is called it attempts to send the cookie to the browser with the session id in.
+        // However if some output has already been sent then this will fail, this is why we suppress errors.
+        @session_start();
+        foreach ($data as $key => $val) {
+            $_SESSION[$key] = $val;
+        }
+        $this->data = $_SESSION;
+        session_write_close();
+
+        return $this;
     }
 
     public function destroy()
     {
         $this->init();
 
-//        # Start the session up, but ignore the error about headers already being sent
-//        @session_start();
-//
-//        # Delete session as suggested in php docs
-//        $_SESSION = [];
-//
-        # Remove the session cookie
+        // Start the session up, but ignore the error about headers already being sent
+        @session_start();
+
+        // Remove the session cookie
         if (ini_get("session.use_cookies")) {
+            $this->removePreviousSessionCookie();
             setcookie(
                 $this->name,
                 "",
@@ -140,14 +185,29 @@ class SessionInstance
                 $this->cookieParams['httponly']
             );
         }
-//
-//        # Destroy the session to remove all remaining session data (on server)
-//        session_destroy();
-//
-//        # Reset the session data
-//        $this->init = false;
-//        $this->data = [];
+
+        session_destroy();
+        $_SESSION = [];
+        $this->init = false;
+        $this->destroyed = true;
+        $this->data = [];
 
         return $this;
+    }
+
+    protected function removePreviousSessionCookie()
+    {
+        // Remove the cookie from session_start()
+        $headers = headers_list();
+        header_remove();
+        $sessionCookie = 'Set-Cookie: ' . $this->name . '=';
+        foreach ($headers as $header) {
+            // @codeCoverageIgnoreStart
+            // headers_list() is always empty in cli - covered in CookieTest
+            if (strncmp($header, $sessionCookie, strlen($sessionCookie)) !== 0) {
+                header($header);
+            }
+            // @codeCoverageIgnoreEnd
+        }
     }
 }

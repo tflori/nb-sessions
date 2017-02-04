@@ -14,7 +14,7 @@ class CookieTest extends TestCase
         if (self::$pid === null) {
             $command = 'php -S localhost:' . self::SERVER_PORT . ' -t tests/public';
             exec('nohup ' . $command . ' > /dev/null 2>&1 & echo $!', $output);
-            self::$pid = (int) $output[0];
+            self::$pid = (int)$output[0];
             do {
                 usleep(10000);
             } while (!@fsockopen('localhost', self::SERVER_PORT));
@@ -46,11 +46,11 @@ class CookieTest extends TestCase
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER         => true,
-            CURLOPT_COOKIEJAR      => '/tmp/nbcookies',
-            CURLOPT_COOKIEFILE     => '/tmp/nbcookies',
-            CURLOPT_VERBOSE        => true,
-            CURLOPT_STDERR         => $fh
+            CURLOPT_HEADER => true,
+            CURLOPT_COOKIEJAR => '/tmp/nbcookies',
+            CURLOPT_COOKIEFILE => '/tmp/nbcookies',
+            CURLOPT_VERBOSE => true,
+            CURLOPT_STDERR => $fh
         ]);
         $response = curl_exec($ch);
 
@@ -65,7 +65,7 @@ class CookieTest extends TestCase
     {
         $cookies = array_filter(explode("\r\n", trim($header)), function ($header) use ($cookieName) {
             return substr($header, 0, 12) === 'Set-Cookie: ' &&
-                    substr($header, 12, strlen($cookieName)) === $cookieName;
+                substr($header, 12, strlen($cookieName)) === $cookieName;
         });
 
         // cookie header existence
@@ -120,32 +120,42 @@ class CookieTest extends TestCase
                 switch ($param) {
                     case 'value':
                         self::assertSame($value, $cookie['value'], 'Expected cookie ' . $cookieName .
-                                                                   ' to be set to ' . $value . '.');
+                            ' to be set to ' . $value . '.');
                         break;
 
                     case 'path':
                         self::assertSame($value, $cookie['path'], 'Expected cookie ' . $cookieName .
-                                                                  ' to be limited to path ' . $value . '.');
+                            ' to be limited to path ' . $value . '.');
                         break;
 
                     case 'domain':
                         self::assertSame($value, $cookie['domain'], 'Expected cookie ' . $cookieName .
-                                                                    ' to be limited to domain ' . $value . '.');
+                            ' to be limited to domain ' . $value . '.');
                         break;
 
                     case 'expires':
                         self::assertEquals($value, $cookie['expires'], 'Expected cookie ' . $cookieName .
-                                           ' to expire at ' . date('Y-m-d H:i:s', $value) . '.', 1);
+                            ' to expire at ' . date('Y-m-d H:i:s', $value) . '.', 1);
+                        break;
+
+                    case 'expired':
+                        if ($value) {
+                            self::assertLessThan(time(), $cookie['expires'], 'Expected cookie ' . $cookieName .
+                                ' to be expired.');
+                        } else {
+                            self::assertGreaterThanOrEqual(time(), $cookie['expires'], 'Expected cookie ' .
+                                $cookieName . ' not to be expired.');
+                        }
                         break;
 
                     case 'secure':
                         self::assertSame($value, $cookie['secure'], 'Expected cookie ' . $cookieName .
-                                         ' to be limited to secure connections.');
+                            ' to be limited to secure connections.');
                         break;
 
                     case 'httponly':
                         self::assertSame($value, $cookie['httponly'], 'Expected cookie ' . $cookieName .
-                                         ' to be limited to http.');
+                            ' to be limited to http.');
                         break;
                 }
             }
@@ -196,7 +206,7 @@ class CookieTest extends TestCase
     {
         list($header, $body) = self::requestWebserver('session.php?session_cookie_lifetime=300');
 
-        self::assertCookieHeader($header, 'nbsession', ['expires' => time()+300]);
+        self::assertCookieHeader($header, 'nbsession', ['expires' => time() + 300]);
     }
 
     public function testCookieSecureToBeSet()
@@ -229,7 +239,7 @@ class CookieTest extends TestCase
 
         list($header, $body) = self::requestWebserver($url);
 
-        self::assertCookieHeader($header, 'nbsession', ['expires' => time()+300]);
+        self::assertCookieHeader($header, 'nbsession', ['expires' => time() + 300]);
     }
 
     public function provideCookieParams()
@@ -238,6 +248,7 @@ class CookieTest extends TestCase
             []
         ];
     }
+
     public function testTimeLimitedCookieGetResendWithParams()
     {
         $url = 'session.php?session_cookie_lifetime=300&session_cookie_path=/&session_cookie_domain=localhost' .
@@ -247,7 +258,7 @@ class CookieTest extends TestCase
         list($header, $body) = self::requestWebserver($url);
 
         self::assertCookieHeader($header, 'nbsession', [
-            'expires' => time()+300,
+            'expires' => time() + 300,
             'path' => '/',
             'domain' => 'localhost',
             'secure' => false,
@@ -259,7 +270,7 @@ class CookieTest extends TestCase
     {
         list($header, $body) = self::requestWebserver('session.php?session_cookie_lifetime=300');
 
-        self::assertCookieHeader($header, 'nbsession', ['expires' => time()+300], 1);
+        self::assertCookieHeader($header, 'nbsession', ['expires' => time() + 300], 1);
     }
 
     public function testDestroyDeletesTheCookie()
@@ -269,5 +280,29 @@ class CookieTest extends TestCase
         list($header, $body) = self::requestWebserver('session.php?destroy=true');
 
         self::assertCookieHeader($header, 'nbsession', ['expired' => true, 'value' => 'deleted']);
+    }
+
+    public function testDestroyDeletesCookieWithParams()
+    {
+        $uri = 'session.php?session_cookie_lifetime=300&session_cookie_path=/&session_cookie_domain=localhost';
+        self::requestWebserver($uri);
+
+        list($header, $body) = self::requestWebserver($uri . '&destroy=true');
+
+        self::assertCookieHeader($header, 'nbsession', [
+            'expired' => true,
+            'value' => 'deleted',
+            'path' => '/',
+            'domain' => 'localhost',
+        ]);
+    }
+
+    public function testDestroyAndReuse()
+    {
+        self::requestWebserver('session.php');
+
+        list($header, $body) = self::requestWebserver('session.php?destroy=true&reuse=true');
+
+        self::assertCookieHeader($header, 'nbsession', ['expired' => false, 'value' => json_decode($body)]);
     }
 }

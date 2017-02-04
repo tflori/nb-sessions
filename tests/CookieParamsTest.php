@@ -3,10 +3,15 @@
 namespace NbSessions\Test;
 
 use NbSessions\SessionInstance;
-use PHPUnit\Framework\TestCase;
 
 class CookieParamsTest extends TestCase
 {
+    public static function tearDownAfterClass()
+    {
+        parent::tearDownAfterClass();
+        session_set_cookie_params(0, null, null, false, false);
+    }
+
     public function testChangesCookieParamsOnInit()
     {
         $oldParmas = session_get_cookie_params();
