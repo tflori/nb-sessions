@@ -7,7 +7,7 @@ ini_set('session.use_cookies', 1);
 session_set_cookie_params(0, null, null, false, false);
 session_set_save_handler(new \NbSessions\Test\SessionHandler());
 
-if ($_GET['use_cookies'] === 'false') {
+if (@$_GET['use_cookies'] === 'false') {
     ini_set('session.use_cookies', 0);
 }
 
@@ -21,11 +21,11 @@ $session = new \NbSessions\SessionInstance('nbsession');
 
 $session->get('foo');
 
-if ($_GET['destroy'] === 'true') {
+if (@$_GET['destroy'] === 'true') {
     $session->destroy();
 }
 
-if ($_GET['reuse'] === 'true') {
+if (@$_GET['reuse'] === 'true') {
     $session->get('foo');
 }
 

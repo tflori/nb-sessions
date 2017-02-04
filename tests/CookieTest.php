@@ -11,7 +11,7 @@ class CookieTest extends TestCase
 
     public static function setUpBeforeClass()
     {
-        if (self::$pid === null) {
+        if ((!isset($_ENV["TRAVIS_PHP_VERSION"]) || $_ENV["TRAVIS_PHP_VERSION"] !== "hhvm") && self::$pid === null) {
             $command = 'php -S localhost:' . self::SERVER_PORT . ' -t tests/public';
             exec('nohup ' . $command . ' > /dev/null 2>&1 & echo $!', $output);
             self::$pid = (int)$output[0];
@@ -32,6 +32,11 @@ class CookieTest extends TestCase
     protected function setUp()
     {
         parent::setUp();
+
+        # HHVM no longer has a built in webserver, so don't run these tests
+        if (isset($_ENV["TRAVIS_PHP_VERSION"]) && $_ENV["TRAVIS_PHP_VERSION"] === "hhvm") {
+            $this->markTestSkipped("No internal webserver available on HHVM for web tests");
+        }
 
         // empty cookies
         exec('echo "" > /tmp/nbcookies');
