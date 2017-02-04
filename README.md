@@ -2,6 +2,9 @@
 
 [![Build Status](https://travis-ci.org/tflori/nb-sessions.svg?branch=master)](https://travis-ci.org/tflori/nb-sessions)
 [![Coverage Status](https://coveralls.io/repos/github/tflori/nb-sessions/badge.svg)](https://coveralls.io/github/tflori/nb-sessions)
+[![Latest Stable Version](https://poser.pugx.org/tflori/nb-sessions/v/stable.svg)](https://packagist.org/packages/tflori/nb-sessions) 
+[![Total Downloads](https://poser.pugx.org/tflori/nb-sessions/downloads.svg)](https://packagist.org/packages/tflori/nb-sessions) 
+[![License](https://poser.pugx.org/tflori/nb-sessions/license.svg)](https://packagist.org/packages/tflori/nb-sessions)
 
 A non-blocking session handler for PHP. This library is inspired by 
 [duncan3dc/sessions](https://github.com/duncan3dc/sessions).
