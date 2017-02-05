@@ -108,7 +108,7 @@ class SessionInstance implements SessionInterface
                 setcookie(
                     $this->name,
                     session_id(),
-                    time() + $this->cookieParams['lifetime'],
+                    $this->cookieParams['lifetime'] > 0 ? time() + $this->cookieParams['lifetime'] : 0,
                     $this->cookieParams['path'],
                     $this->cookieParams['domain'],
                     $this->cookieParams['secure'],

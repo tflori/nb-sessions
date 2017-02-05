@@ -141,6 +141,11 @@ class CookieTest extends \PHPUnit\Framework\TestCase
                             ' to expire at ' . date('Y-m-d H:i:s', $value) . '.', 1);
                         break;
 
+                    case 'session':
+                        self::assertNull($cookie['expires'], 'Expected cookie ' . $cookieName .
+                            ' to be a session cookie');
+                        break;
+
                     case 'expired':
                         if ($value) {
                             self::assertLessThan(time(), $cookie['expires'], 'Expected cookie ' . $cookieName .
@@ -306,6 +311,9 @@ class CookieTest extends \PHPUnit\Framework\TestCase
 
         list($header, $body) = self::requestWebserver('session.php?destroy=true&reuse=true');
 
-        self::assertCookieHeader($header, 'nbsession', ['expired' => false, 'value' => json_decode($body)]);
+        self::assertCookieHeader($header, 'nbsession', [
+            'session' => true,
+            'value' => json_decode($body),
+        ]);
     }
 }
