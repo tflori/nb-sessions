@@ -171,6 +171,47 @@ class SessionInstance implements SessionInterface
         return $this;
     }
 
+    /**
+     * Delete $key(s) from session
+     *
+     * @param string ...$key
+     * @return $this
+     */
+    public function delete($key)
+    {
+        $this->init();
+
+        $keys = func_get_args();
+
+        $keyExists = false;
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $this->data)) {
+                $keyExists = true;
+                break;
+            }
+        }
+
+        if (!$keyExists) {
+            return $this;
+        }
+
+        @session_start();
+        foreach ($keys as $key) {
+            unset($_SESSION[$key]);
+        }
+        $this->data = $_SESSION;
+        session_write_close();
+
+        return $this;
+    }
+
+    /**
+     * Destroy the session
+     *
+     * Delete the session data from memory and from storage. Delete the cookie if used and reset the session object.
+     *
+     * @return $this
+     */
     public function destroy()
     {
         $this->init();
