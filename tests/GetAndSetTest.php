@@ -6,7 +6,8 @@ use NbSessions\SessionInstance;
 
 class GetAndSetTest extends TestCase
 {
-    public function testReturnsNullForUnknownKeys()
+    /** @test */
+    public function returnsNullForUnknownKeys()
     {
         $session = new SessionInstance('session');
 
@@ -15,7 +16,8 @@ class GetAndSetTest extends TestCase
         self::assertNull($result);
     }
 
-    public function testStoresData()
+    /** @test */
+    public function storesData()
     {
         $session = new SessionInstance('session');
 
@@ -24,7 +26,8 @@ class GetAndSetTest extends TestCase
         self::assertSame('bar', $session->get('foo'));
     }
 
-    public function testStoresDataToSession()
+    /** @test */
+    public function storesDataToSession()
     {
         $session = new SessionInstance('session');
 
@@ -34,7 +37,8 @@ class GetAndSetTest extends TestCase
         $session->set('foo', 'bar');
     }
 
-    public function testDoesNotStoreWhenNothingChanged()
+    /** @test */
+    public function doesNotStoreWhenNothingChanged()
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
@@ -45,7 +49,8 @@ class GetAndSetTest extends TestCase
         $session->set('foo', 'bar');
     }
 
-    public function testSetCanHandleArrays()
+    /** @test */
+    public function setCanHandleArrays()
     {
         $session = new SessionInstance('session');
 

@@ -12,7 +12,8 @@ class CookieParamsTest extends TestCase
         session_set_cookie_params(0, null, null, false, false);
     }
 
-    public function testChangesCookieParamsOnInit()
+    /** @test */
+    public function changesCookieParamsOnInit()
     {
         $oldParmas = session_get_cookie_params();
         $newParams = array_merge($oldParmas, [
@@ -28,7 +29,8 @@ class CookieParamsTest extends TestCase
         self::assertSame($newParams, session_get_cookie_params());
     }
 
-    public function testCookieParamsCanBePartially()
+    /** @test */
+    public function cookieParamsCanBePartially()
     {
         $session = new SessionInstance('session', ['path' => '/product']);
 

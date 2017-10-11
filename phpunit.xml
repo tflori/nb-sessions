@@ -9,7 +9,8 @@
          convertWarningsToExceptions="true"
          processIsolation="false"
          stopOnFailure="false"
-         syntaxCheck="true">
+         syntaxCheck="true"
+         printerClass="\NbSessions\Test\Printer">
     <testsuite name="tests">
         <directory>./tests/</directory>
     </testsuite>

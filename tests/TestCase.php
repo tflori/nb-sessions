@@ -2,10 +2,13 @@
 
 namespace NbSessions\Test;
 
+use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Mockery\Mock;
 
 abstract class TestCase extends \PHPUnit\Framework\TestCase
 {
+    use MockeryPHPUnitIntegration;
+
     /** @var Mock|\SessionHandler */
     protected $sessionHandler;
 
@@ -16,9 +19,23 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
         session_set_save_handler($this->sessionHandler);
     }
 
-    protected function tearDown()
+    /**
+     * Performs assertions shared by all tests of a test case. This method is
+     * called before execution of a test ends and before the tearDown method.
+     */
+    protected function assertPostConditions()
     {
-        parent::tearDown();
+        $this->addMockeryExpectationsToAssertionCount();
         \Mockery::close();
+        parent::assertPostConditions();
+    }
+
+    protected function addMockeryExpectationsToAssertionCount()
+    {
+        $container = \Mockery::getContainer();
+        if ($container != null) {
+            $count = $container->mockery_getExpectationCount();
+            $this->addToAssertionCount($count);
+        }
     }
 }

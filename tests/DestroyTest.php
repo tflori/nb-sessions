@@ -6,7 +6,8 @@ use NbSessions\SessionInstance;
 
 class DestroyTest extends TestCase
 {
-    public function testRemovesAllData()
+    /** @test */
+    public function removesAllData()
     {
         $session = new SessionInstance('session');
         $session->set([
@@ -22,7 +23,8 @@ class DestroyTest extends TestCase
         self::assertNull($session->get('name'));
     }
 
-    public function testRemovesDataFromSuperglobal()
+    /** @test */
+    public function removesDataFromSuperglobal()
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
@@ -32,7 +34,8 @@ class DestroyTest extends TestCase
         self::assertSame([], $_SESSION);
     }
 
-    public function testDestroysTheSession()
+    /** @test */
+    public function destroysTheSession()
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
@@ -41,7 +44,8 @@ class DestroyTest extends TestCase
         $session->destroy();
     }
 
-    public function testSessionGetRestarted()
+    /** @test */
+    public function sessionGetRestarted()
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');

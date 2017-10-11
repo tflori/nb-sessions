@@ -2,12 +2,14 @@
 
 namespace NbSessions\Test;
 
+use Mockery\Mock;
 use NbSessions\SessionInstance;
 use NbSessions\SessionNamespace;
 
 class NamespaceTest extends TestCase
 {
-    public function testReturnsANamespace()
+    /** @test */
+    public function returnsANamespace()
     {
         $session = new SessionInstance('session');
 
@@ -16,7 +18,8 @@ class NamespaceTest extends TestCase
         self::assertInstanceOf(SessionNamespace::class, $namespace);
     }
 
-    public function testReturnsTheSameObjectOnSecondCall()
+    /** @test */
+    public function returnsTheSameObjectOnSecondCall()
     {
         $session = new SessionInstance('session');
         $namespace = $session->getNamespace('games');
@@ -26,7 +29,8 @@ class NamespaceTest extends TestCase
         self::assertSame($namespace, $result);
     }
 
-    public function testDoesNotOverwriteOthers()
+    /** @test */
+    public function doesNotOverwriteOthers()
     {
         $session = new SessionInstance('session');
         $nsGames = $session->getNamespace('games');
@@ -41,7 +45,8 @@ class NamespaceTest extends TestCase
         self::assertSame('work', $nsWork->get('foo'));
     }
 
-    public function testNamespaceCanReceiveArrayOfData()
+    /** @test */
+    public function namespaceCanReceiveArrayOfData()
     {
         $session = new SessionInstance('session');
         $namespace = $session->getNamespace('games');
@@ -55,9 +60,11 @@ class NamespaceTest extends TestCase
         self::assertSame('John Doe', $namespace->get('name'));
     }
 
-    public function testDoesNotStoreUnderGuessableName()
+    /** @test */
+    public function doesNotStoreUnderGuessableName()
     {
         $key = '';
+        /** @var Mock|SessionInstance $mock */
         $mock = \Mockery::mock(SessionInstance::class)->makePartial();
         $mock->shouldReceive('set')->andReturnUsing(function ($data) use (&$key) {
             $key = array_keys($data)[0];

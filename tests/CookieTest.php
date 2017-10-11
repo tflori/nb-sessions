@@ -175,77 +175,87 @@ class CookieTest extends \PHPUnit\Framework\TestCase
         self::assertCookieHeader($header, $cookieName, [], 0);
     }
 
-    public function testSendsSessionCookieByDefault()
+    /** @test */
+    public function sendsSessionCookieByDefault()
     {
-        list($header, $body) = self::requestWebserver('session.php');
+        list($header) = self::requestWebserver('session.php');
 
         self::assertCookieHeader($header, 'nbsession');
     }
 
-    public function testDoesNotCookie()
+    /** @test */
+    public function doesNotCookie()
     {
-        list($header, $body) = self::requestWebserver('session.php?use_cookies=false');
+        list($header) = self::requestWebserver('session.php?use_cookies=false');
 
         self::assertNotCookieHeader($header, 'nbsession');
     }
 
-    public function testCookieValueMatchesSessionId()
+    /** @test */
+    public function cookieValueMatchesSessionId()
     {
         list($header, $body) = self::requestWebserver('session.php');
 
         self::assertCookieHeader($header, 'nbsession', ['value' => json_decode($body)]);
     }
 
-    public function testCookiePathToBeSet()
+    /** @test */
+    public function cookiePathToBeSet()
     {
-        list($header, $body) = self::requestWebserver('session.php?session_cookie_path=/product');
+        list($header) = self::requestWebserver('session.php?session_cookie_path=/product');
 
         self::assertCookieHeader($header, 'nbsession', ['path' => '/product']);
     }
 
-    public function testCookieDomainToBeSet()
+    /** @test */
+    public function cookieDomainToBeSet()
     {
-        list($header, $body) = self::requestWebserver('session.php?session_cookie_domain=example.com');
+        list($header) = self::requestWebserver('session.php?session_cookie_domain=example.com');
 
         self::assertCookieHeader($header, 'nbsession', ['domain' => 'example.com']);
     }
 
-    public function testCookieExpiresToBeSet()
+    /** @test */
+    public function cookieExpiresToBeSet()
     {
-        list($header, $body) = self::requestWebserver('session.php?session_cookie_lifetime=300');
+        list($header) = self::requestWebserver('session.php?session_cookie_lifetime=300');
 
         self::assertCookieHeader($header, 'nbsession', ['expires' => time() + 300]);
     }
 
-    public function testCookieSecureToBeSet()
+    /** @test */
+    public function cookieSecureToBeSet()
     {
-        list($header, $body) = self::requestWebserver('session.php?session_cookie_secure=true');
+        list($header) = self::requestWebserver('session.php?session_cookie_secure=true');
 
         self::assertCookieHeader($header, 'nbsession', ['secure' => true]);
     }
 
-    public function testCookieHttpOnlyToBeSet()
+    /** @test */
+    public function cookieHttpOnlyToBeSet()
     {
-        list($header, $body) = self::requestWebserver('session.php?session_cookie_httponly=true');
+        list($header) = self::requestWebserver('session.php?session_cookie_httponly=true');
 
         self::assertCookieHeader($header, 'nbsession', ['httponly' => true]);
     }
 
-    public function testSessionCookieGetNotResend()
+    /** @test */
+    public function sessionCookieGetNotResend()
     {
         self::requestWebserver('session.php');
 
-        list($header, $body) = self::requestWebserver('session.php');
+        list($header) = self::requestWebserver('session.php');
 
         self::assertNotCookieHeader($header, 'nbsession');
     }
 
-    public function testTimeLimitedCookieGetResend()
+    /** @test */
+    public function timeLimitedCookieGetResend()
     {
         $url = 'session.php?session_cookie_lifetime=300';
         self::requestWebserver($url);
 
-        list($header, $body) = self::requestWebserver($url);
+        list($header) = self::requestWebserver($url);
 
         self::assertCookieHeader($header, 'nbsession', ['expires' => time() + 300]);
     }
@@ -257,13 +267,14 @@ class CookieTest extends \PHPUnit\Framework\TestCase
         ];
     }
 
-    public function testTimeLimitedCookieGetResendWithParams()
+    /** @test */
+    public function timeLimitedCookieGetResendWithParams()
     {
         $url = 'session.php?session_cookie_lifetime=300&session_cookie_path=/&session_cookie_domain=localhost' .
             '&session_cookie_secure=false&session_cookie_httponly=false';
         self::requestWebserver($url);
 
-        list($header, $body) = self::requestWebserver($url);
+        list($header) = self::requestWebserver($url);
 
         self::assertCookieHeader($header, 'nbsession', [
             'expires' => time() + 300,
@@ -274,28 +285,31 @@ class CookieTest extends \PHPUnit\Framework\TestCase
         ]);
     }
 
-    public function testCookieGetNotSendTwice()
+    /** @test */
+    public function cookieGetNotSendTwice()
     {
-        list($header, $body) = self::requestWebserver('session.php?session_cookie_lifetime=300');
+        list($header) = self::requestWebserver('session.php?session_cookie_lifetime=300');
 
         self::assertCookieHeader($header, 'nbsession', ['expires' => time() + 300], 1);
     }
 
-    public function testDestroyDeletesTheCookie()
+    /** @test */
+    public function destroyDeletesTheCookie()
     {
         self::requestWebserver('session.php');
 
-        list($header, $body) = self::requestWebserver('session.php?destroy=true');
+        list($header) = self::requestWebserver('session.php?destroy=true');
 
         self::assertCookieHeader($header, 'nbsession', ['expired' => true, 'value' => 'deleted']);
     }
 
-    public function testDestroyDeletesCookieWithParams()
+    /** @test */
+    public function destroyDeletesCookieWithParams()
     {
         $uri = 'session.php?session_cookie_lifetime=300&session_cookie_path=/&session_cookie_domain=localhost';
         self::requestWebserver($uri);
 
-        list($header, $body) = self::requestWebserver($uri . '&destroy=true');
+        list($header) = self::requestWebserver($uri . '&destroy=true');
 
         self::assertCookieHeader($header, 'nbsession', [
             'expired' => true,
@@ -305,7 +319,8 @@ class CookieTest extends \PHPUnit\Framework\TestCase
         ]);
     }
 
-    public function testDestroyAndReuse()
+    /** @test */
+    public function destroyAndReuse()
     {
         self::requestWebserver('session.php');
 

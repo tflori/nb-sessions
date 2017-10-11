@@ -14,29 +14,33 @@ class BasicTest extends TestCase
         }
     }
 
-    public function testRequiresAName()
+    /** @test */
+    public function requiresAName()
     {
         self::expectException(\InvalidArgumentException::class);
         self::expectExceptionMessage('Cannot start session, no name has been specified');
 
-        $session = new SessionInstance('');
+        new SessionInstance('');
     }
 
-    public function testCanBeInitialized()
+    /** @test */
+    public function canBeInitialized()
     {
         $session = new SessionInstance('session');
 
         self::assertInstanceOf(SessionInstance::class, $session);
     }
 
-    public function testDoesNotStartSessionWithoutInteraction()
+    /** @test */
+    public function doesNotStartSessionWithoutInteraction()
     {
-        $session = new SessionInstance('session');
+        new SessionInstance('session');
 
         self::assertNotSame(PHP_SESSION_ACTIVE, session_status());
     }
 
-    public function testStartsSessionOnFirstInteraction()
+    /** @test */
+    public function startsSessionOnFirstInteraction()
     {
         $_SESSION['foo'] = 'bar';
         $session = new SessionInstance('session');
@@ -46,7 +50,8 @@ class BasicTest extends TestCase
         self::assertArrayNotHasKey('foo', $_SESSION);
     }
 
-    public function testClosesSessionAfterInitialization()
+    /** @test */
+    public function closesSessionAfterInitialization()
     {
         $session = new SessionInstance('session');
 
@@ -55,7 +60,8 @@ class BasicTest extends TestCase
         self::assertNotSame(PHP_SESSION_ACTIVE, session_status());
     }
 
-    public function testSetsTheSessionNameOnInit()
+    /** @test */
+    public function setsTheSessionNameOnInit()
     {
         $session = new SessionInstance('foobar');
 
@@ -64,7 +70,8 @@ class BasicTest extends TestCase
         self::assertSame('foobar', session_name());
     }
 
-    public function testDoesNotReReadSessionWithoutChanges()
+    /** @test */
+    public function doesNotReReadSessionWithoutChanges()
     {
         $session = new SessionInstance('session');
         $session->get('foo');
