@@ -6,7 +6,8 @@ use NbSessions\SessionInstance;
 
 class DeleteTest extends TestCase
 {
-    public function testDeletedKeysDoNotExists()
+    /** @test */
+    public function deletedKeysDoNotExists()
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
@@ -17,7 +18,8 @@ class DeleteTest extends TestCase
         self::assertArrayNotHasKey('foo', $_SESSION);
     }
 
-    public function testDeletesWorksWithMultipleKeys()
+    /** @test */
+    public function deletesWorksWithMultipleKeys()
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
@@ -29,7 +31,8 @@ class DeleteTest extends TestCase
         self::assertNull($session->get('sense'));
     }
 
-    public function testDeletesInSessionFile()
+    /** @test */
+    public function deletesInSessionFile()
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
@@ -40,7 +43,8 @@ class DeleteTest extends TestCase
         $session->delete('foo');
     }
 
-    public function testReturnsSessionInstance()
+    /** @test */
+    public function returnsSessionInstance()
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
@@ -50,7 +54,8 @@ class DeleteTest extends TestCase
         self::assertSame($session, $result);
     }
 
-    public function testDoesNotWriteWhenNothingDeleted()
+    /** @test */
+    public function doesNotWriteWhenNothingDeleted()
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
