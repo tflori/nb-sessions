@@ -184,9 +184,17 @@ class CookieTest extends \PHPUnit\Framework\TestCase
     }
 
     /** @test */
-    public function doesNotCookie()
+    public function doesNotSendCookie()
     {
         list($header) = self::requestWebserver('session.php?use_cookies=false');
+
+        self::assertNotCookieHeader($header, 'nbsession');
+    }
+
+    /** @test */
+    public function doesNotSendCookieWithoutWrite()
+    {
+        list($header) = self::requestWebserver('session.php?write=false');
 
         self::assertNotCookieHeader($header, 'nbsession');
     }

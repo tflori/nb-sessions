@@ -19,7 +19,11 @@ foreach (['path', 'domain', 'lifetime', 'secure', 'httponly'] as $parameter) {
 
 $session = new \NbSessions\SessionInstance('nbsession');
 
-$session->get('foo');
+if (@$_GET['write'] !== 'false') {
+    $session->set('foo', 'bar');
+} else {
+    $session->get('foo');
+}
 
 if (@$_GET['destroy'] === 'true') {
     $session->destroy();

@@ -40,7 +40,20 @@ class BasicTest extends TestCase
     }
 
     /** @test */
-    public function startsSessionOnFirstInteraction()
+    public function doesNotStartASessionWhenNoSessionIdGiven()
+    {
+        $session = new SessionInstance('session');
+        if (!empty(session_id())) {
+            $this->markTestSkipped('Session already started in previous tests');
+        }
+
+        $session->get('foo');
+
+        self::assertEmpty(session_id());
+    }
+
+    /** @test */
+    public function resetsSessionVariablesSetOutside()
     {
         $_SESSION['foo'] = 'bar';
         $session = new SessionInstance('session');
@@ -48,6 +61,20 @@ class BasicTest extends TestCase
         $session->get('foo');
 
         self::assertArrayNotHasKey('foo', $_SESSION);
+    }
+
+    /** @test */
+    public function startsSessionOnFirstInteraction()
+    {
+        $session = new SessionInstance('session');
+        if (!empty(session_id())) {
+            $this->markTestSkipped('Session already started in previous tests');
+        }
+
+        $session->set('foo', 'bar');
+
+        self::assertArrayHasKey('foo', $_SESSION);
+        self::assertNotEmpty(session_id());
     }
 
     /** @test */
