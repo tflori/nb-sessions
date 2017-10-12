@@ -8,6 +8,12 @@ namespace NbSessions;
  * @package NbSessions
  * @author  Thomas Flori <thflori@gmail.com>
  * @codeCoverageIgnore Simple singleton forward
+ *
+ * @method static SessionNamespace getNamespace(string $name)
+ * @method static mixed get(string $key)
+ * @method static SessionInstance set(string|array $key, mixed $value = null)
+ * @method static SessionInstance delete(string $key)
+ * @method static SessionInstance destroy()
  */
 class Session
 {
