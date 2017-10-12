@@ -91,16 +91,34 @@ class SessionInstance implements SessionInterface
         );
 
         session_name($this->name);
-        session_start();
+        $_SESSION = [];
+
+        if (ini_get('session.use_cookies') && empty($_COOKIE[$this->name])) {
+            return;
+        }
+
+        $this->updateSession();
+    }
+
+    protected function updateSession(array $data = [])
+    {
+        // Whenever a key is set, we need to start the session up again to store it.
+        // When session_start is called it attempts to send the cookie to the browser with the session id in.
+        // However if some output has already been sent then this will fail, this is why we suppress errors.
+        @session_start();
 
         // refresh time limited cookies on each use
         if (ini_get('session.use_cookies')) {
             $sendCookie = false;
             if ($this->cookieParams['lifetime'] != 0) {
                 $sendCookie = true;
-            } elseif ($this->destroyed) {
-                $this->destroyed = false;
-                $sendCookie = true;
+            } else {
+                if ($this->destroyed) {
+                    $this->destroyed = false;
+                    $sendCookie = true;
+                } elseif (!empty($_COOKIE[$this->name])) {
+                    $this->removePreviousSessionCookie();
+                }
             }
 
             if ($sendCookie) {
@@ -117,6 +135,9 @@ class SessionInstance implements SessionInterface
             }
         }
 
+        foreach ($data as $key => $val) {
+            $_SESSION[$key] = $val;
+        }
         $this->data = $_SESSION;
 
         // close the session to avoid locks
@@ -128,11 +149,7 @@ class SessionInstance implements SessionInterface
     {
         $this->init();
 
-        if (!array_key_exists($key, $this->data)) {
-            return null;
-        }
-
-        return $this->data[$key];
+        return array_key_exists($key, $this->data) ? $this->data[$key] : null;
     }
 
     /** {@inheritdoc} */
@@ -158,15 +175,7 @@ class SessionInstance implements SessionInterface
             return $this;
         }
 
-        // Whenever a key is set, we need to start the session up again to store it.
-        // When session_start is called it attempts to send the cookie to the browser with the session id in.
-        // However if some output has already been sent then this will fail, this is why we suppress errors.
-        @session_start();
-        foreach ($data as $key => $val) {
-            $_SESSION[$key] = $val;
-        }
-        $this->data = $_SESSION;
-        session_write_close();
+        $this->updateSession($data);
 
         return $this;
     }
