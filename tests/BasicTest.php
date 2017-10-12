@@ -64,16 +64,13 @@ class BasicTest extends TestCase
     }
 
     /** @test */
-    public function startsSessionOnFirstInteraction()
+    public function startsSessionWhenCookiePresent()
     {
+        $_COOKIE['session'] = 'abc123';
         $session = new SessionInstance('session');
-        if (!empty(session_id())) {
-            $this->markTestSkipped('Session already started in previous tests');
-        }
 
-        $session->set('foo', 'bar');
+        $session->get('foo');
 
-        self::assertArrayHasKey('foo', $_SESSION);
         self::assertNotEmpty(session_id());
     }
 
