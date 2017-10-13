@@ -4,7 +4,7 @@ require __DIR__ . '/../../vendor/autoload.php';
 
 // reset session settings
 ini_set('session.use_cookies', 1);
-mkdir('/tmp/nbsess', 0777, true);
+@mkdir('/tmp/nbsess', 0777, true);
 ini_set('session.save_path', '/tmp/nbsess');
 session_set_cookie_params(0, null, null, false, false);
 

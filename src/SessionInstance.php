@@ -110,17 +110,16 @@ class SessionInstance implements SessionInterface
         foreach ($data as $key => $val) {
             if ($val === null) {
                 unset($_SESSION[$key]);
+                // destroy the session when empty
+                if (empty($_SESSION)) {
+                    $this->destroy();
+                    return;
+                }
             } else {
                 $_SESSION[$key] = $val;
             }
         }
         $this->data = $_SESSION;
-
-        // destroy the session when empty
-        if (empty($this->data)) {
-            $this->destroy();
-            return;
-        }
 
         // refresh time limited cookies on each use
         if (ini_get('session.use_cookies')) {
