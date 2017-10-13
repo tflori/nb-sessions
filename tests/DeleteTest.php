@@ -35,10 +35,11 @@ class DeleteTest extends TestCase
     public function deletesInSessionFile()
     {
         $session = new SessionInstance('session');
+        $session->set('sense', 42);
         $session->set('foo', 'bar');
 
         $this->sessionHandler->shouldReceive('write')
-            ->with(session_id(), '')->once()->passthru();
+            ->with(session_id(), 'sense|i:42;')->once()->passthru();
 
         $session->delete('foo');
     }
@@ -59,8 +60,20 @@ class DeleteTest extends TestCase
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
+
         $this->sessionHandler->shouldNotReceive('write')->passthru();
 
         $session->delete('sense');
+    }
+
+    /** @test */
+    public function destorysTheSessionWhenLastKeyGotDeleted()
+    {
+        $session = new SessionInstance('session');
+        $session->set('foo', 'bar');
+
+        $this->sessionHandler->shouldReceive('destroy')->once()->passthru();
+
+        $session->delete('foo');
     }
 }

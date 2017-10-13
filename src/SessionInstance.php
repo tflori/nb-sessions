@@ -107,6 +107,21 @@ class SessionInstance implements SessionInterface
         // However if some output has already been sent then this will fail, this is why we suppress errors.
         @session_start();
 
+        foreach ($data as $key => $val) {
+            if ($val === null) {
+                unset($_SESSION[$key]);
+            } else {
+                $_SESSION[$key] = $val;
+            }
+        }
+        $this->data = $_SESSION;
+
+        // destroy the session when empty
+        if (empty($this->data)) {
+            $this->destroy();
+            return;
+        }
+
         // refresh time limited cookies on each use
         if (ini_get('session.use_cookies')) {
             $sendCookie = false;
@@ -135,12 +150,7 @@ class SessionInstance implements SessionInterface
             }
         }
 
-        foreach ($data as $key => $val) {
-            $_SESSION[$key] = $val;
-        }
-        $this->data = $_SESSION;
-
-        // close the session to avoid locks
+        // write and close to avoid locks
         session_write_close();
     }
 
@@ -196,7 +206,7 @@ class SessionInstance implements SessionInterface
         foreach ($keys as $key) {
             if (array_key_exists($key, $this->data)) {
                 $keyExists = true;
-                break;
+                $this->data[$key] = null;
             }
         }
 
@@ -204,12 +214,7 @@ class SessionInstance implements SessionInterface
             return $this;
         }
 
-        @session_start();
-        foreach ($keys as $key) {
-            unset($_SESSION[$key]);
-        }
-        $this->data = $_SESSION;
-        session_write_close();
+        $this->updateSession($this->data);
 
         return $this;
     }
@@ -223,10 +228,8 @@ class SessionInstance implements SessionInterface
      */
     public function destroy()
     {
-        $this->init();
-
-        // Start the session up, but ignore the error about headers already being sent
         @session_start();
+        session_destroy();
 
         // Remove the session cookie
         if (ini_get("session.use_cookies")) {
@@ -242,11 +245,9 @@ class SessionInstance implements SessionInterface
             );
         }
 
-        session_destroy();
         $_SESSION = [];
-        $this->init = false;
+        $this->data = $_SESSION;
         $this->destroyed = true;
-        $this->data = [];
 
         return $this;
     }
