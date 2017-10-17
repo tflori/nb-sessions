@@ -110,15 +110,10 @@ class SessionInstance implements SessionInterface
 
     protected function sendCookie($delete = false)
     {
-        if (!self::$useCookies) {
-            return;
-        }
-
-        if ($this->cookieSent && !$delete) {
-            return;
-        }
-
-        if (!$delete && isset($_COOKIE[$this->name]) && $this->cookieParams['lifetime'] == 0) {
+        if (!self::$useCookies ||
+            $this->cookieSent && !$delete ||
+            !$delete && isset($_COOKIE[$this->name]) && $this->cookieParams['lifetime'] == 0
+        ) {
             return;
         }
 
