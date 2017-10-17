@@ -19,6 +19,14 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
         session_set_save_handler($this->sessionHandler);
     }
 
+    protected function tearDown()
+    {
+        parent::tearDown();
+
+        ini_set('session.use_cookies', 1);
+    }
+
+
     /**
      * Performs assertions shared by all tests of a test case. This method is
      * called before execution of a test ends and before the tearDown method.

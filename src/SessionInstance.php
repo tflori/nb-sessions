@@ -10,34 +10,37 @@ namespace NbSessions;
  */
 class SessionInstance implements SessionInterface
 {
+    /** Weather to use cookies
+     * @var bool */
+    protected static $useCookies;
+
     /** Whether the session has been started or not.
-     * @var bool $init
-     */
+     * @var bool $init */
     protected $init = false;
 
-    /** Wether the session has been destroyed or not.
+    /** Weather the session has been destroyed or not.
      * @var bool */
     protected $destroyed = false;
 
     /** The name of the session.
-     * @var string $name
-     */
+     * @var string $name */
     protected $name = '';
 
     /** The cache of the session data.
-     * @var array $data
-     */
+     * @var array $data */
     protected $data = [];
 
     /** The cookie params.
-     * @var array
-     */
+     * @var array */
     protected $cookieParams = [];
 
     /** The created SessionNamespaces
-     * @var SessionNamespace[]
-     */
+     * @var SessionNamespace[] */
     protected $namespaces = [];
+
+    /** Weather the cookie got sent
+     * @var bool */
+    protected $cookieSent = false;
 
     /**
      * @param string $name The name of the session
@@ -45,12 +48,20 @@ class SessionInstance implements SessionInterface
      */
     public function __construct($name, $cookieParams = [])
     {
+        if (self::$useCookies === null) {
+            self::$useCookies = (bool) ini_get('session.use_cookies');
+            ini_set('session.use_cookies', 0);
+        }
+
         if (empty($name)) {
             throw new \InvalidArgumentException('Cannot start session, no name has been specified');
         }
 
         $this->name = $name;
-        $this->cookieParams = array_merge(session_get_cookie_params(), $cookieParams);
+
+        if (self::$useCookies) {
+            $this->cookieParams = array_merge(session_get_cookie_params(), $cookieParams);
+        }
     }
 
     /**
@@ -76,28 +87,58 @@ class SessionInstance implements SessionInterface
      */
     protected function init()
     {
+        // run once
         if ($this->init) {
             return;
         }
-
         $this->init = true;
 
-        session_set_cookie_params(
-            $this->cookieParams['lifetime'],
+        // get the session data
+        session_name($this->name);
+        $_SESSION = [];
+
+        if (self::$useCookies) {
+            if (empty($_COOKIE[$this->name])) {
+                return;
+            } else {
+                session_id($_COOKIE[$this->name]);
+            }
+        }
+
+        $this->updateSession();
+    }
+
+    protected function sendCookie($delete = false)
+    {
+        if (!self::$useCookies ||
+            $this->cookieSent && !$delete ||
+            !$delete && isset($_COOKIE[$this->name]) && $this->cookieParams['lifetime'] == 0
+        ) {
+            return;
+        }
+
+        $this->removePreviousSessionCookie();
+        $id = session_id();
+        $time = $this->cookieParams['lifetime'] > 0 ? time() + $this->cookieParams['lifetime'] : 0;
+
+        // Remove the session cookie
+        if ($delete) {
+            $id = "";
+            $time = 1;
+            unset($_COOKIE[$this->name]);
+        } else {
+            $this->cookieSent = true;
+        }
+
+        setcookie(
+            $this->name,
+            $id,
+            $time,
             $this->cookieParams['path'],
             $this->cookieParams['domain'],
             $this->cookieParams['secure'],
             $this->cookieParams['httponly']
         );
-
-        session_name($this->name);
-        $_SESSION = [];
-
-        if (ini_get('session.use_cookies') && empty($_COOKIE[$this->name])) {
-            return;
-        }
-
-        $this->updateSession();
     }
 
     protected function updateSession(array $data = [])
@@ -107,40 +148,23 @@ class SessionInstance implements SessionInterface
         // However if some output has already been sent then this will fail, this is why we suppress errors.
         @session_start();
 
-        // refresh time limited cookies on each use
-        if (ini_get('session.use_cookies')) {
-            $sendCookie = false;
-            if ($this->cookieParams['lifetime'] != 0) {
-                $sendCookie = true;
-            } else {
-                if ($this->destroyed) {
-                    $this->destroyed = false;
-                    $sendCookie = true;
-                } elseif (!empty($_COOKIE[$this->name])) {
-                    $this->removePreviousSessionCookie();
-                }
-            }
-
-            if ($sendCookie) {
-                $this->removePreviousSessionCookie();
-                setcookie(
-                    $this->name,
-                    session_id(),
-                    $this->cookieParams['lifetime'] > 0 ? time() + $this->cookieParams['lifetime'] : 0,
-                    $this->cookieParams['path'],
-                    $this->cookieParams['domain'],
-                    $this->cookieParams['secure'],
-                    $this->cookieParams['httponly']
-                );
-            }
-        }
-
         foreach ($data as $key => $val) {
-            $_SESSION[$key] = $val;
+            if ($val === null) {
+                unset($_SESSION[$key]);
+                // destroy the session when empty
+                if (empty($_SESSION)) {
+                    $this->destroy();
+                    return;
+                }
+            } else {
+                $_SESSION[$key] = $val;
+            }
         }
         $this->data = $_SESSION;
 
-        // close the session to avoid locks
+        $this->sendCookie();
+
+        // write and close to avoid locks
         session_write_close();
     }
 
@@ -196,7 +220,7 @@ class SessionInstance implements SessionInterface
         foreach ($keys as $key) {
             if (array_key_exists($key, $this->data)) {
                 $keyExists = true;
-                break;
+                $this->data[$key] = null;
             }
         }
 
@@ -204,12 +228,7 @@ class SessionInstance implements SessionInterface
             return $this;
         }
 
-        @session_start();
-        foreach ($keys as $key) {
-            unset($_SESSION[$key]);
-        }
-        $this->data = $_SESSION;
-        session_write_close();
+        $this->updateSession($this->data);
 
         return $this;
     }
@@ -223,30 +242,14 @@ class SessionInstance implements SessionInterface
      */
     public function destroy()
     {
-        $this->init();
-
-        // Start the session up, but ignore the error about headers already being sent
         @session_start();
-
-        // Remove the session cookie
-        if (ini_get("session.use_cookies")) {
-            $this->removePreviousSessionCookie();
-            setcookie(
-                $this->name,
-                "",
-                1,
-                $this->cookieParams['path'],
-                $this->cookieParams['domain'],
-                $this->cookieParams['secure'],
-                $this->cookieParams['httponly']
-            );
-        }
-
         session_destroy();
+
+        $this->sendCookie(true);
+
         $_SESSION = [];
-        $this->init = false;
+        $this->data = $_SESSION;
         $this->destroyed = true;
-        $this->data = [];
 
         return $this;
     }

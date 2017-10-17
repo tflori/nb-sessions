@@ -68,6 +68,7 @@ class BasicTest extends TestCase
     {
         $_COOKIE['session'] = 'abc123';
         $session = new SessionInstance('session');
+        $this->sessionHandler->shouldReceive('read')->with('abc123')->andReturn('foo|s:3:"bar";');
 
         $session->get('foo');
 
@@ -101,8 +102,8 @@ class BasicTest extends TestCase
         $session->get('foo');
         $_SESSION['test'] = 'foobar';
 
-        $session->get('bar');
+        $this->sessionHandler->shouldNotReceive('read')->with(session_id());
 
-        self::assertSame('foobar', $_SESSION['test']);
+        $session->get('bar');
     }
 }

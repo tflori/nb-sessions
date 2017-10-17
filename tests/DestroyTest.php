@@ -49,7 +49,7 @@ class DestroyTest extends TestCase
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
-        $this->sessionHandler->shouldReceive('destroy')->with(session_id())->once()->passthru();
+        $this->sessionHandler->shouldReceive('destroy')->with(session_id())->atLeast()->once()->passthru();
         $session->destroy();
         // in hhvm we need to define the session handler again after destroy
         session_set_save_handler($this->sessionHandler);
