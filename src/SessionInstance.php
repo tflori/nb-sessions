@@ -14,6 +14,10 @@ class SessionInstance implements SessionInterface
      * @var bool */
     protected static $useCookies;
 
+    /** Weather or not an empty session should be destroyed
+     * @var bool */
+    public $destroyEmptySession = true;
+
     /** Whether the session has been started or not.
      * @var bool $init */
     protected $init = false;
@@ -152,7 +156,7 @@ class SessionInstance implements SessionInterface
             if ($val === null) {
                 unset($_SESSION[$key]);
                 // destroy the session when empty
-                if (empty($_SESSION)) {
+                if (empty($_SESSION) && $this->destroyEmptySession) {
                     $this->destroy();
                     return;
                 }
