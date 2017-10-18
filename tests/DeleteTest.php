@@ -67,12 +67,24 @@ class DeleteTest extends TestCase
     }
 
     /** @test */
-    public function destorysTheSessionWhenLastKeyGotDeleted()
+    public function destroysTheSessionWhenLastKeyGotDeleted()
     {
         $session = new SessionInstance('session');
         $session->set('foo', 'bar');
 
         $this->sessionHandler->shouldReceive('destroy')->once()->passthru();
+
+        $session->delete('foo');
+    }
+
+    /** @test */
+    public function doesNotDestroyWhenConfigured()
+    {
+        $session = new SessionInstance('session');
+        $session->set('foo', 'bar');
+        $session->destroyEmptySession = false;
+
+        $this->sessionHandler->shouldNotReceive('destroy');
 
         $session->delete('foo');
     }
