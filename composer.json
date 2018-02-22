@@ -1,7 +1,7 @@
 {
   "name": "tflori/nb-sessions",
   "description": "Non-Blocking-Sessions made easy",
-  "license": "Apache 2.0",
+  "license": "Apache-2.0",
   "require": {
     "php": "^7.0"
   },
