@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit bootstrap="vendor/autoload.php"
-         backupGlobals="false"
+         backupGlobals="true"
          backupStaticAttributes="false"
          verbose="true"
          colors="true"
@@ -9,8 +9,7 @@
          convertWarningsToExceptions="true"
          processIsolation="false"
          stopOnFailure="false"
-         syntaxCheck="true"
-         printerClass="\NbSessions\Test\Printer">
+         printerClass="PhpUnitPrinter\TextPrinter">
     <testsuite name="tests">
         <directory>./tests/</directory>
     </testsuite>

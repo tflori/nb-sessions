@@ -20,20 +20,15 @@ class Session
     /** @var SessionInstance */
     protected static $instance;
 
-    public static $name = 'nbs-session';
-
     public static function __callStatic($method, $args)
     {
         return call_user_func_array([static::getInstance(), $method], $args);
     }
 
-    /**
-     * @return SessionInstance
-     */
-    protected function getInstance()
+    protected function getInstance(): SessionInstance
     {
         if (!static::$instance) {
-            static::$instance = new Session(static::$name);
+            static::$instance = new SessionInstance(new PhpWrapper());
         }
 
         return static::$instance;

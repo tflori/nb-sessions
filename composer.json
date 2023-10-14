@@ -3,12 +3,13 @@
   "description": "Non-Blocking-Sessions made easy",
   "license": "Apache-2.0",
   "require": {
-    "php": "^7.0"
+    "php": "^7.3 || ^8.0"
   },
   "require-dev": {
-    "phpunit/phpunit": "^6.0",
-    "mockery/mockery": "^0.9.6",
-    "squizlabs/php_codesniffer": "^2.7",
+    "phpunit/phpunit": "*",
+    "mockery/mockery": "*",
+    "squizlabs/php_codesniffer": "*",
+    "tflori/phpunit-printer": "*",
     "ext-curl": "*"
   },
   "autoload": {

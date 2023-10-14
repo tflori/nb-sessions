@@ -6,27 +6,19 @@ use NbSessions\SessionInstance;
 
 class BasicTest extends TestCase
 {
-    protected function setUp()
-    {
-        parent::setUp();
-        if (session_status() === 2) {
-            session_write_close();
-        }
-    }
-
     /** @test */
-    public function requiresAName()
+    public function getsTheNameFromIni()
     {
-        self::expectException(\InvalidArgumentException::class);
-        self::expectExceptionMessage('Cannot start session, no name has been specified');
+        $this->phpWrapper->shouldReceive('iniGet')->with('session.name')
+            ->once()->andReturn('foo');
 
-        new SessionInstance('');
+        new SessionInstance([], $this->phpWrapper);
     }
 
     /** @test */
     public function canBeInitialized()
     {
-        $session = new SessionInstance('session');
+        $session = new SessionInstance([], $this->phpWrapper);
 
         self::assertInstanceOf(SessionInstance::class, $session);
     }
@@ -34,29 +26,26 @@ class BasicTest extends TestCase
     /** @test */
     public function doesNotStartSessionWithoutInteraction()
     {
-        new SessionInstance('session');
+        $this->phpWrapper->shouldNotReceive('sessionStart');
 
-        self::assertNotSame(PHP_SESSION_ACTIVE, session_status());
+        new SessionInstance([], $this->phpWrapper);
     }
 
     /** @test */
     public function doesNotStartASessionWhenNoSessionIdGiven()
     {
-        $session = new SessionInstance('session');
-        if (!empty(session_id())) {
-            $this->markTestSkipped('Session already started in previous tests');
-        }
+        $session = new SessionInstance([], $this->phpWrapper);
+        $this->phpWrapper->shouldNotReceive('sessionStart');
 
         $session->get('foo');
-
-        self::assertEmpty(session_id());
     }
 
     /** @test */
     public function resetsSessionVariablesSetOutside()
     {
         $_SESSION['foo'] = 'bar';
-        $session = new SessionInstance('session');
+        $_COOKIE['session'] = 'abc123';
+        $session = new SessionInstance(['name' => 'session'], $this->phpWrapper);
 
         $session->get('foo');
 
@@ -67,43 +56,46 @@ class BasicTest extends TestCase
     public function startsSessionWhenCookiePresent()
     {
         $_COOKIE['session'] = 'abc123';
-        $session = new SessionInstance('session');
-        $this->sessionHandler->shouldReceive('read')->with('abc123')->andReturn('foo|s:3:"bar";');
+        $session = new SessionInstance(['name' => 'session'], $this->phpWrapper);
+
+        $this->phpWrapper->shouldReceive('sessionStart')->once()->andReturn(true);
 
         $session->get('foo');
-
-        self::assertNotEmpty(session_id());
     }
 
     /** @test */
     public function closesSessionAfterInitialization()
     {
-        $session = new SessionInstance('session');
+        $_COOKIE['session'] = 'abc123';
+        $session = new SessionInstance(['name' => 'session'], $this->phpWrapper);
+
+        $this->phpWrapper->shouldReceive('sessionStart')->once()->andReturn(true)->ordered();
+        $this->phpWrapper->shouldReceive('sessionWriteClose')->once()->andReturn(true)->ordered();
 
         $session->get('foo');
-
-        self::assertNotSame(PHP_SESSION_ACTIVE, session_status());
     }
 
     /** @test */
-    public function setsTheSessionNameOnInit()
+    public function storesTheSessionDataOnInitialization()
     {
-        $session = new SessionInstance('foobar');
 
-        $session->get('foo');
+        $_COOKIE['session'] = 'abc123';
+        $this->phpWrapper->sessionData = ['foo' => 'bar'];
+        $session = new SessionInstance(['name' => 'session'], $this->phpWrapper);
 
-        self::assertSame('foobar', session_name());
+        self::assertSame('bar', $session->get('foo'));
     }
 
     /** @test */
     public function doesNotReReadSessionWithoutChanges()
     {
-        $session = new SessionInstance('session');
-        $session->get('foo');
-        $_SESSION['test'] = 'foobar';
+        $_COOKIE['session'] = 'abc123';
+        $this->phpWrapper->sessionData = ['foo' => 'bar'];
+        $session = new SessionInstance(['name' => 'session'], $this->phpWrapper);
+        $foo = $session->get('foo');
 
-        $this->sessionHandler->shouldNotReceive('read')->with(session_id());
+        $this->phpWrapper->shouldNotReceive('sessionStart');
 
-        $session->get('bar');
+        $session->set('foo', $foo);
     }
 }

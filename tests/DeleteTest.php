@@ -6,10 +6,19 @@ use NbSessions\SessionInstance;
 
 class DeleteTest extends TestCase
 {
+    /** @var SessionInstance */
+    protected $session;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->session = new SessionInstance([], $this->phpWrapper);
+    }
+
     /** @test */
     public function deletedKeysDoNotExists()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set('foo', 'bar');
 
         $session->delete('foo');
@@ -19,9 +28,9 @@ class DeleteTest extends TestCase
     }
 
     /** @test */
-    public function deletesWorksWithMultipleKeys()
+    public function deleteWorksWithMultipleKeys()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set('foo', 'bar');
         $session->set('sense', 42);
 
@@ -34,12 +43,15 @@ class DeleteTest extends TestCase
     /** @test */
     public function deletesInSessionFile()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set('sense', 42);
         $session->set('foo', 'bar');
 
-        $this->sessionHandler->shouldReceive('write')
-            ->with(session_id(), 'sense|i:42;')->once()->passthru();
+        $this->phpWrapper->shouldReceive('sessionWriteClose')
+            ->once()->andReturnUsing(function () {
+                // we expect that $_SESSION only contains "sense" when writing
+                self::assertSame(['sense' => 42], $_SESSION);
+            });
 
         $session->delete('foo');
     }
@@ -47,7 +59,7 @@ class DeleteTest extends TestCase
     /** @test */
     public function returnsSessionInstance()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set('foo', 'bar');
 
         $result = $session->delete('foo');
@@ -58,10 +70,10 @@ class DeleteTest extends TestCase
     /** @test */
     public function doesNotWriteWhenNothingDeleted()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set('foo', 'bar');
 
-        $this->sessionHandler->shouldNotReceive('write')->passthru();
+        $this->phpWrapper->shouldNotReceive('sessionWriteClose');
 
         $session->delete('sense');
     }
@@ -69,10 +81,10 @@ class DeleteTest extends TestCase
     /** @test */
     public function destroysTheSessionWhenLastKeyGotDeleted()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set('foo', 'bar');
 
-        $this->sessionHandler->shouldReceive('destroy')->once()->passthru();
+        $this->phpWrapper->shouldReceive('sessionDestroy')->once()->passthru();
 
         $session->delete('foo');
     }
@@ -80,11 +92,10 @@ class DeleteTest extends TestCase
     /** @test */
     public function doesNotDestroyWhenConfigured()
     {
-        $session = new SessionInstance('session');
+        $session = new SessionInstance(['destroyEmpty' => false], $this->phpWrapper);
         $session->set('foo', 'bar');
-        $session->destroyEmptySession = false;
 
-        $this->sessionHandler->shouldNotReceive('destroy');
+        $this->phpWrapper->shouldNotReceive('sessionDestroy');
 
         $session->delete('foo');
     }

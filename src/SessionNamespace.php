@@ -21,14 +21,12 @@ class SessionNamespace implements SessionInterface
         $this->prefix = '__' . md5($name) . '__';
     }
 
-    /** {@inheritdoc} */
-    public function get($key)
+    public function get(string $key)
     {
         return $this->session->get($this->prefix . $key);
     }
 
-    /** {@inheritdoc} */
-    public function set($data, $value = null)
+    public function set($data, $value = null): SessionInterface
     {
         if (!is_array($data)) {
             $data = [$data => $value];
@@ -40,6 +38,15 @@ class SessionNamespace implements SessionInterface
         }
 
         $this->session->set($prefixed);
+
+        return $this;
+    }
+
+    public function delete(string ...$keys): SessionInterface
+    {
+        $this->session->delete(...array_map(function ($key) {
+            return $this->prefix . $key;
+        }, $keys));
 
         return $this;
     }

@@ -8,10 +8,19 @@ use NbSessions\SessionNamespace;
 
 class NamespaceTest extends TestCase
 {
+    /** @var SessionInstance */
+    protected $session;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->session = new SessionInstance([], $this->phpWrapper);
+    }
+
     /** @test */
     public function returnsANamespace()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
 
         $namespace = $session->getNamespace('games');
 
@@ -21,7 +30,7 @@ class NamespaceTest extends TestCase
     /** @test */
     public function returnsTheSameObjectOnSecondCall()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $namespace = $session->getNamespace('games');
 
         $result = $session->getNamespace('games');
@@ -32,7 +41,7 @@ class NamespaceTest extends TestCase
     /** @test */
     public function doesNotOverwriteOthers()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $nsGames = $session->getNamespace('games');
         $nsWork = $session->getNamespace('work');
 
@@ -48,7 +57,7 @@ class NamespaceTest extends TestCase
     /** @test */
     public function namespaceCanReceiveArrayOfData()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $namespace = $session->getNamespace('games');
 
         $namespace->set([
@@ -66,13 +75,14 @@ class NamespaceTest extends TestCase
         $key = '';
         /** @var Mock|SessionInstance $mock */
         $mock = \Mockery::mock(SessionInstance::class)->makePartial();
-        $mock->shouldReceive('set')->andReturnUsing(function ($data) use (&$key) {
+        $mock->shouldReceive('set')->andReturnUsing(function ($data) use (&$key, $mock) {
             $key = array_keys($data)[0];
+            return $mock;
         });
 
         $namespace = $mock->getNamespace('games');
         $namespace->set('foo', 'bar');
 
-        self::assertNotContains('games', $key);
+        self::assertStringNotContainsString('games', $key);
     }
 }

@@ -2,341 +2,192 @@
 
 namespace NbSessions\Test;
 
-class CookieTest extends \PHPUnit\Framework\TestCase
+use NbSessions\SessionInstance;
+use Mockery as m;
+use Hamcrest\Matchers;
+
+class CookieTest extends TestCase
 {
-    const SERVER_PORT = 31337;
-    private static $pid;
-
-    public static function setUpBeforeClass()
+    /** @test */
+    public function setsACookieWithSessionName()
     {
-        if ((!isset($_ENV["TRAVIS_PHP_VERSION"]) || $_ENV["TRAVIS_PHP_VERSION"] !== "hhvm") && self::$pid === null) {
-            $command = 'php -S localhost:' . self::SERVER_PORT . ' -t tests/public';
-            exec('nohup ' . $command . ' > /dev/null 2>&1 & echo $!', $output);
-            self::$pid = (int)$output[0];
-            do {
-                usleep(10000);
-            } while (!@fsockopen('localhost', self::SERVER_PORT));
+        $session = new SessionInstance(['name' => 'foo_session'], $this->phpWrapper);
 
-            register_shutdown_function(function () {
-                echo "stopping webserver with pid " . self::$pid . "... ";
-                exec('kill ' . self::$pid);
-                echo "done\n";
-            });
-        }
+        $this->phpWrapper->shouldReceive('setCookie')
+            ->with('foo_session', Matchers::matchesPattern('/^[a-zA-Z0-9]{16}$/'), m::andAnyOtherArgs())
+            ->once()->andReturn(true);
 
-        parent::setUpBeforeClass();
+        $session->set('foo', 'bar');
     }
 
-    protected function setUp()
+    /** @test */
+    public function doesNotStartASessionWhenCookieNotSet()
     {
-        parent::setUp();
+        $session = new SessionInstance(['name' => 'foo_session'], $this->phpWrapper);
 
-        # HHVM no longer has a built in webserver, so don't run these tests
-        if (isset($_ENV["TRAVIS_PHP_VERSION"]) && $_ENV["TRAVIS_PHP_VERSION"] === "hhvm") {
-            $this->markTestSkipped("No internal webserver available on HHVM for web tests");
-        }
+        $this->phpWrapper->shouldNotReceive('setCookie');
 
-        // empty cookies
-        exec('echo "" > /tmp/nbcookies');
+        $session->get('foo');
     }
 
-
-    protected static function requestWebserver($url)
+    /** @test */
+    public function getsTheSessionIdFromTheCookie()
     {
-        $url = 'http://localhost:' . self::SERVER_PORT . '/' . ltrim($url, '/');
+        $_COOKIE['foo_session'] = 'abc123';
+        $session = new SessionInstance(['name' => 'foo_session'], $this->phpWrapper);
 
-        $fh = fopen('/tmp/nbcurldebug', 'w');
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER => true,
-            CURLOPT_COOKIEJAR => '/tmp/nbcookies',
-            CURLOPT_COOKIEFILE => '/tmp/nbcookies',
-            CURLOPT_VERBOSE => true,
-            CURLOPT_STDERR => $fh
-        ]);
-        $response = curl_exec($ch);
+        $this->phpWrapper->shouldReceive('sessionId')->with('abc123')->once();
 
-        $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        $header = substr($response, 0, $header_size);
-        $body = substr($response, $header_size);
-
-        return [$header, $body];
+        $session->get('foo');
     }
 
-    protected static function assertCookieHeader($header, $cookieName, $params = [], $count = null)
+    /** @test */
+    public function getsTheCookieParametersFromOptions()
     {
-        $cookies = array_filter(explode("\r\n", trim($header)), function ($header) use ($cookieName) {
-            return substr($header, 0, 12) === 'Set-Cookie: ' &&
-                substr($header, 12, strlen($cookieName)) === $cookieName;
-        });
+        $session = new SessionInstance([
+            'name' => 'foo_session',
+            'cookie_lifetime' => 3600,
+            'cookie_path' => '/admin/',
+            'cookie_domain' => '.example.com',
+            'cookie_secure' => true,
+            'cookie_httponly' => true,
+            'cookie_samesite' => 'Strict',
+        ], $this->phpWrapper);
 
-        // cookie header existence
-        if ($count === 0) {
-            self::assertEmpty($cookies, 'Expected headers not to contain cookie ' . $cookieName . '.');
-        } elseif ($count != null) {
-            self::assertCount(
-                $count,
-                $cookies,
-                'Expected headers to contain cookie ' . $cookieName . ' exactly ' . $count . ' times ' .
-                'but headers contained it ' . count($cookies) . ' times.'
-            );
-        } else {
-            self::assertNotEmpty($cookies, 'Expected header to contain cookie ' . $cookieName . '.');
-        }
+        $this->phpWrapper->shouldReceive('setCookie')
+            ->withArgs(function ($key, $value, $options) {
+                if ($key === 'foo_session') {
+                    self::assertNotEmpty($value);
 
-        // check params
-        if (!empty($params) && count($cookies) > 0) {
-            $cookie = call_user_func(function ($header) {
-                $cookieRaw = substr($header, 12);
-                $cookie = [
-                    'path' => null,
-                    'domain' => null,
-                    'expires' => null,
-                    'secure' => false,
-                    'httponly' => false,
-                ];
+                    self::assertArrayHasKey('expires', $options);
+                    self::assertEqualsWithDelta(time()+3600, $options['expires'], 1);
 
-                $parts = explode(';', $cookieRaw);
-                list($cookie['name'], $cookie['value']) = explode('=', trim(array_shift($parts)));
+                    self::assertArrayHasKey('path', $options);
+                    self::assertSame('/admin/', $options['path']);
 
-                foreach ($parts as $part) {
-                    @list($key, $value) = explode('=', trim($part));
-                    if ($value === null) {
-                        $value = true;
-                    }
-                    switch (strtolower($key)) {
-                        case 'expires':
-                            $cookie['expires'] = strtotime($value);
-                            break;
+                    self::assertArrayHasKey('domain', $options);
+                    self::assertSame('.example.com', $options['domain']);
 
-                        default:
-                            $cookie[strtolower($key)] = $value;
-                            break;
-                    }
+                    self::assertArrayHasKey('secure', $options);
+                    self::assertSame(true, $options['secure']);
+
+                    self::assertArrayHasKey('httponly', $options);
+                    self::assertSame(true, $options['httponly']);
+
+                    self::assertArrayHasKey('samesite', $options);
+                    self::assertSame('Strict', $options['samesite']);
+
+                    return true;
                 }
+                return false;
+            })->once()->andReturn(true);
 
-                return $cookie;
-            }, array_shift($cookies));
+        $session->set('foo', 'bar');
+    }
 
-            foreach ($params as $param => $value) {
-                switch ($param) {
-                    case 'value':
-                        self::assertSame($value, $cookie['value'], 'Expected cookie ' . $cookieName .
-                            ' to be set to ' . $value . '.');
-                        break;
+    /** @test */
+    public function fallsBackToCookieParametersFromSessionConfig()
+    {
+        $session = new SessionInstance([
+            'name' => 'foo_session',
+        ], $this->phpWrapper);
 
-                    case 'path':
-                        self::assertSame($value, $cookie['path'], 'Expected cookie ' . $cookieName .
-                            ' to be limited to path ' . $value . '.');
-                        break;
+        $this->phpWrapper->shouldReceive('setCookie')
+            ->withArgs(function ($key, $value, $options) {
+                if ($key === 'foo_session') {
+                    self::assertNotEmpty($value);
 
-                    case 'domain':
-                        self::assertSame($value, $cookie['domain'], 'Expected cookie ' . $cookieName .
-                            ' to be limited to domain ' . $value . '.');
-                        break;
+                    self::assertArrayHasKey('expires', $options);
+                    if (ini_get('session.cookie_lifetime') > 0) {
+                        self::assertEqualsWithDelta(time()+ini_get('session.cookie_lifetime'), $options['expires'], 1);
+                    } else {
+                        self::assertSame(0, $options['expires']);
+                    }
 
-                    case 'expires':
-                        self::assertEquals($value, $cookie['expires'], 'Expected cookie ' . $cookieName .
-                            ' to expire at ' . date('Y-m-d H:i:s', $value) . '.', 1);
-                        break;
+                    self::assertArrayHasKey('path', $options);
+                    self::assertSame(ini_get('session.cookie_path'), $options['path']);
 
-                    case 'session':
-                        self::assertNull($cookie['expires'], 'Expected cookie ' . $cookieName .
-                            ' to be a session cookie');
-                        break;
+                    self::assertArrayHasKey('domain', $options);
+                    self::assertSame(ini_get('session.cookie_domain'), $options['domain']);
 
-                    case 'expired':
-                        if ($value) {
-                            self::assertLessThan(time(), $cookie['expires'], 'Expected cookie ' . $cookieName .
-                                ' to be expired.');
-                        } else {
-                            self::assertGreaterThanOrEqual(time(), $cookie['expires'], 'Expected cookie ' .
-                                $cookieName . ' not to be expired.');
-                        }
-                        break;
+                    self::assertArrayHasKey('secure', $options);
+                    self::assertSame(ini_get('session.cookie_secure'), $options['secure']);
 
-                    case 'secure':
-                        self::assertSame($value, $cookie['secure'], 'Expected cookie ' . $cookieName .
-                            ' to be limited to secure connections.');
-                        break;
+                    self::assertArrayHasKey('httponly', $options);
+                    self::assertSame(ini_get('session.cookie_httponly'), $options['httponly']);
 
-                    case 'httponly':
-                        self::assertSame($value, $cookie['httponly'], 'Expected cookie ' . $cookieName .
-                            ' to be limited to http.');
-                        break;
+                    self::assertArrayHasKey('samesite', $options);
+                    self::assertSame(ini_get('session.cookie_samesite'), $options['samesite']);
+
+                    return true;
                 }
-            }
-        }
-    }
+                return false;
+            })->once()->andReturn(true);
 
-    protected static function assertNotCookieHeader($header, $cookieName)
-    {
-        self::assertCookieHeader($header, $cookieName, [], 0);
+        $session->set('foo', 'bar');
     }
 
     /** @test */
-    public function sendsSessionCookieByDefault()
+    public function sessionCookieGetsNotResend()
     {
-        list($header) = self::requestWebserver('session.php');
+        $_COOKIE['foo_session'] = 'abc123';
+        $session = new SessionInstance([
+            'name' => 'foo_session',
+            'cookie_lifetime' => 0,
+        ], $this->phpWrapper);
 
-        self::assertCookieHeader($header, 'nbsession');
+        $this->phpWrapper->shouldNotReceive('setCookie');
+
+        $session->set('foo', 'bar');
     }
 
     /** @test */
-    public function doesNotSendCookie()
+    public function timeLimitedCookieGetsResend()
     {
-        list($header) = self::requestWebserver('session.php?use_cookies=false');
+        $_COOKIE['foo_session'] = 'abc123';
+        $session = new SessionInstance([
+            'name' => 'foo_session',
+            'cookie_lifetime' => 300,
+        ], $this->phpWrapper);
 
-        self::assertNotCookieHeader($header, 'nbsession');
-    }
+        $this->phpWrapper->shouldReceive('setCookie')
+            ->with('foo_session', 'abc123', m::andAnyOtherArgs())
+            ->once()->andReturn(true);
 
-    /** @test */
-    public function doesNotSendCookieWithoutWrite()
-    {
-        list($header) = self::requestWebserver('session.php?write=false');
-
-        self::assertNotCookieHeader($header, 'nbsession');
-    }
-
-    /** @test */
-    public function cookieValueMatchesSessionId()
-    {
-        list($header, $body) = self::requestWebserver('session.php');
-
-        self::assertCookieHeader($header, 'nbsession', ['value' => json_decode($body)]);
-    }
-
-    /** @test */
-    public function cookiePathToBeSet()
-    {
-        list($header) = self::requestWebserver('session.php?session_cookie_path=/product');
-
-        self::assertCookieHeader($header, 'nbsession', ['path' => '/product']);
-    }
-
-    /** @test */
-    public function cookieDomainToBeSet()
-    {
-        list($header) = self::requestWebserver('session.php?session_cookie_domain=example.com');
-
-        self::assertCookieHeader($header, 'nbsession', ['domain' => 'example.com']);
-    }
-
-    /** @test */
-    public function cookieExpiresToBeSet()
-    {
-        list($header) = self::requestWebserver('session.php?session_cookie_lifetime=300');
-
-        self::assertCookieHeader($header, 'nbsession', ['expires' => time() + 300]);
-    }
-
-    /** @test */
-    public function cookieSecureToBeSet()
-    {
-        list($header) = self::requestWebserver('session.php?session_cookie_secure=true');
-
-        self::assertCookieHeader($header, 'nbsession', ['secure' => true]);
-    }
-
-    /** @test */
-    public function cookieHttpOnlyToBeSet()
-    {
-        list($header) = self::requestWebserver('session.php?session_cookie_httponly=true');
-
-        self::assertCookieHeader($header, 'nbsession', ['httponly' => true]);
-    }
-
-    /** @test */
-    public function sessionCookieGetNotResend()
-    {
-        self::requestWebserver('session.php');
-
-        list($header) = self::requestWebserver('session.php');
-
-        self::assertNotCookieHeader($header, 'nbsession');
-    }
-
-    /** @test */
-    public function timeLimitedCookieGetResend()
-    {
-        $url = 'session.php?session_cookie_lifetime=300';
-        self::requestWebserver($url);
-
-        list($header) = self::requestWebserver($url);
-
-        self::assertCookieHeader($header, 'nbsession', ['expires' => time() + 300]);
-    }
-
-    public function provideCookieParams()
-    {
-        return [
-            []
-        ];
-    }
-
-    /** @test */
-    public function timeLimitedCookieGetResendWithParams()
-    {
-        $url = 'session.php?session_cookie_lifetime=300&session_cookie_path=/&session_cookie_domain=localhost' .
-            '&session_cookie_secure=false&session_cookie_httponly=false';
-        self::requestWebserver($url);
-
-        list($header) = self::requestWebserver($url);
-
-        self::assertCookieHeader($header, 'nbsession', [
-            'expires' => time() + 300,
-            'path' => '/',
-            'domain' => 'localhost',
-            'secure' => false,
-            'httponly' => false,
-        ]);
-    }
-
-    /** @test */
-    public function cookieGetNotSendTwice()
-    {
-        list($header) = self::requestWebserver('session.php?session_cookie_lifetime=300');
-
-        self::assertCookieHeader($header, 'nbsession', ['expires' => time() + 300], 1);
+        $session->set('foo', 'bar');
     }
 
     /** @test */
     public function destroyDeletesTheCookie()
     {
-        self::requestWebserver('session.php');
+        $_COOKIE['foo_session'] = 'abc123';
+        $session = new SessionInstance([
+            'name' => 'foo_session',
+        ], $this->phpWrapper);
+        $session->set('foo', 'bar');
 
-        list($header) = self::requestWebserver('session.php?destroy=true');
+        $this->phpWrapper->shouldReceive('setCookie')
+            ->with('foo_session', '', m::andAnyOtherArgs())
+            ->once()->andReturn(true);
 
-        self::assertCookieHeader($header, 'nbsession', ['expired' => true, 'value' => 'deleted']);
+        $session->destroy();
     }
 
     /** @test */
-    public function destroyDeletesCookieWithParams()
+    public function reusingADestroyedSessionCreatesANewSessionId()
     {
-        $uri = 'session.php?session_cookie_lifetime=300&session_cookie_path=/&session_cookie_domain=localhost';
-        self::requestWebserver($uri);
+        $_COOKIE['foo_session'] = 'abc123';
+        $session = new SessionInstance([
+            'name' => 'foo_session',
+        ], $this->phpWrapper);
+        $session->set('foo', 'bar');
+        $session->destroy();
 
-        list($header) = self::requestWebserver($uri . '&destroy=true');
+        $this->phpWrapper->shouldReceive('sessionCreateId')->andReturn('xyz098');
+        $this->phpWrapper->shouldReceive('setCookie')
+            ->with('foo_session', 'xyz098', m::andAnyOtherArgs())
+            ->once()->andReturn(true);
 
-        self::assertCookieHeader($header, 'nbsession', [
-            'expired' => true,
-            'value' => 'deleted',
-            'path' => '/',
-            'domain' => 'localhost',
-        ]);
-    }
-
-    /** @test */
-    public function destroyAndReuse()
-    {
-        self::requestWebserver('session.php');
-
-        list($header, $body) = self::requestWebserver('session.php?destroy=true&reuse=true');
-
-        self::assertCookieHeader($header, 'nbsession', [
-            'session' => true,
-            'value' => json_decode($body),
-        ]);
+        $session->set('foo', 'bar');
     }
 }

@@ -6,18 +6,25 @@ use NbSessions\SessionInstance;
 
 class DestroyTest extends TestCase
 {
+    /** @var SessionInstance */
+    protected $session;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->session = new SessionInstance([], $this->phpWrapper);
+    }
+
     /** @test */
     public function removesAllData()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set([
             'foo' => 'bar',
             'name' => 'John Doe'
         ]);
 
         $session->destroy();
-        // in hhvm we need to define the session handler again after destroy
-        session_set_save_handler($this->sessionHandler);
 
         self::assertNull($session->get('foo'));
         self::assertNull($session->get('name'));
@@ -26,7 +33,7 @@ class DestroyTest extends TestCase
     /** @test */
     public function removesDataFromSuperglobal()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set('foo', 'bar');
 
         $session->destroy();
@@ -37,9 +44,10 @@ class DestroyTest extends TestCase
     /** @test */
     public function destroysTheSession()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set('foo', 'bar');
-        $this->sessionHandler->shouldReceive('destroy')->with(session_id())->once()->passthru();
+
+        $this->phpWrapper->shouldReceive('sessionDestroy')->with()->once()->passthru();
 
         $session->destroy();
     }
@@ -47,12 +55,10 @@ class DestroyTest extends TestCase
     /** @test */
     public function sessionGetRestarted()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set('foo', 'bar');
-        $this->sessionHandler->shouldReceive('destroy')->with(session_id())->atLeast()->once()->passthru();
+        $this->phpWrapper->shouldReceive('sessionDestroy')->with()->once()->passthru();
         $session->destroy();
-        // in hhvm we need to define the session handler again after destroy
-        session_set_save_handler($this->sessionHandler);
 
         $session->set('foo', 'bar');
 

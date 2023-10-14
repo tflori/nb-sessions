@@ -6,10 +6,19 @@ use NbSessions\SessionInstance;
 
 class GetAndSetTest extends TestCase
 {
+    /** @var SessionInstance */
+    protected $session;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->session = new SessionInstance([], $this->phpWrapper);
+    }
+
     /** @test */
     public function returnsNullForUnknownKeys()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
 
         $result = $session->get('foobar');
 
@@ -19,7 +28,7 @@ class GetAndSetTest extends TestCase
     /** @test */
     public function storesData()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
 
         $session->set('foo', 'bar');
 
@@ -29,10 +38,9 @@ class GetAndSetTest extends TestCase
     /** @test */
     public function storesDataToSession()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
 
-        $this->sessionHandler->shouldReceive('write')->once()
-            ->with(session_id(), 'foo|' . serialize('bar'))->passthru();
+        $this->phpWrapper->shouldReceive('sessionWriteClose')->once()->passthru();
 
         $session->set('foo', 'bar');
     }
@@ -40,11 +48,10 @@ class GetAndSetTest extends TestCase
     /** @test */
     public function doesNotStoreWhenNothingChanged()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
         $session->set('foo', 'bar');
 
-        $this->sessionHandler->shouldNotReceive('write')
-            ->with(session_id(), 'foo|' . serialize('bar'))->passthru();
+        $this->phpWrapper->shouldNotReceive('sessionWriteClose');
 
         $session->set('foo', 'bar');
     }
@@ -52,10 +59,9 @@ class GetAndSetTest extends TestCase
     /** @test */
     public function setCanHandleArrays()
     {
-        $session = new SessionInstance('session');
+        $session = $this->session;
 
-        $this->sessionHandler->shouldReceive('write')
-            ->with(session_id(), 'foo|' . serialize('bar') . 'name|' . serialize('John Doe'))->passthru();
+        $this->phpWrapper->shouldReceive('sessionWriteClose')->once()->passthru();
 
         $session->set([
             'foo' => 'bar',
