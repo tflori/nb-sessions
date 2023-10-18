@@ -167,6 +167,11 @@ class SessionInstance implements SessionInterface
         return $this;
     }
 
+    public function getId(): ?string
+    {
+        return $this->sessionId;
+    }
+
     /**
      * Ensure the session data is loaded into cache.
      *
